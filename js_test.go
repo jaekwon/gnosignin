@@ -22,6 +22,9 @@ func TestServeJS(t *testing.T) {
 			t.Errorf("gnosignin.%s is not offered", name)
 		}
 	}
+	if !strings.Contains(body, "window.gnosignin = gnosignin") {
+		t.Error("a page that looks for window.gnosignin would not find it")
+	}
 	// the key never leaves the browser: made not extractable, and nothing exports the private half
 	if !strings.Contains(body, "generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false,") || strings.Contains(body, "exportKey('pkcs8'") || strings.Contains(body, "exportKey('jwk'") {
 		t.Error("the browser key is made extractable, or its private half is exported")

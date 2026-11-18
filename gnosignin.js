@@ -198,3 +198,5 @@ const gnosignin = (() => {
 
   return { configure, connect, prove, refusal, remember, keyMake, keyGet, keyPut, keyDrop, keySignIn, markSignedOut, signedOutOnPurpose, signBytesOf };
 })();
+// a top-level const is no property of window: this one is, for a page that looks for window.gnosignin
+if (typeof window !== 'undefined') window.gnosignin = gnosignin;

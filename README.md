@@ -42,6 +42,8 @@ var phrases = gnosignin.NewChallenges()
 mux.HandleFunc("GET /gnosignin.js", gnosignin.ServeJS)
 ```
 
+`gnosignin.ValidAddress` checks a g1 address's checksum, for a list of admins read at start-up.
+
 The site keeps its own accounts, sessions and remembered keys. Its three endpoints must do the following, in this
 order. [example/](example/) is a complete, tested site that does all of it: an admin page that only listed wallets
 may enter.
@@ -113,7 +115,8 @@ async function signOut(forget) {
 
 `configure` takes:
 
-- `challenge` and `key`: the two endpoint paths;
+- `challenge` and `key`: the two endpoint paths, and `challengeMethod` (`'GET'`, or `'POST'` for a site whose phrase
+  is an Origin-checked POST);
 - `slot`: a name per page, when one origin has several;
 - `site`: the name Adena's connect window shows;
 - `db` and `flag`: where the key and the signed-out mark are kept;

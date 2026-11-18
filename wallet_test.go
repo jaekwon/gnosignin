@@ -148,3 +148,14 @@ func TestShort(t *testing.T) {
 		t.Error("Short")
 	}
 }
+
+func TestValidAddress(t *testing.T) {
+	if !ValidAddress("g1manfred47kzduec920z88wfr64ylksmdcedlf5") {
+		t.Error("the live-chain address is refused")
+	}
+	for _, bad := range []string{"", "g1", "g1manfred47kzduec920z88wfr64ylksmdcedlf4", "g1manfred47kzduec920z88wfr64ylksmdcedlf", "G1MANFRED47KZDUEC920Z88WFR64YLKSMDCEDLF5", "cosmos1manfred47kzduec920z88wfr64ylksmdc"} {
+		if ValidAddress(bad) {
+			t.Errorf("%q passed", bad)
+		}
+	}
+}

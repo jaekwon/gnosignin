@@ -16,6 +16,7 @@
 const gnosignin = (() => {
   const cfg = {
     challenge: '/api/auth/challenge', // GET: {id, words}; ?key=<id> names a browser key; ?for=key asks for a key's phrase
+    challengeMethod: 'GET',           // or 'POST', for a site whose phrase is a POST (an Origin-checked one, say)
     key: '/api/auth/key',             // POST {id, key, sig, forget}: a session, or 401 {forgotten: true}
     slot: 'main',                     // the record this page keeps its key under (a page each, when a site has several)
     db: 'gnosignin-keys',             // the IndexedDB database the keys live in
@@ -44,7 +45,7 @@ const gnosignin = (() => {
 
   // --- the wallet (Adena)
 
-  const READ_MS = 25000, HUMAN_MS = 120000; // a call the wallet answers by itself, and one a person must approve
+  const READ_MS = 25000, HUMAN_MS = 180000; // a call the wallet answers by itself, and one a person must approve (a Ledger can take a while)
   const wcall = (p, ms = READ_MS) => Promise.race([Promise.resolve(p), new Promise((_, rej) => setTimeout(() => rej(new Error(`Adena has not answered in ${Math.round(ms / 1000)} s — if its window is open, approve it there and try again`)), ms))]);
   // 4001 doubles as ALREADY_CONNECTED and NETWORK_TIMEOUT in Adena's enum; the type field is the honest one
   const established = e => !!e && (e.code === 0 || e.type === 'CONNECTION_SUCCESS' || e.type === 'ALREADY_CONNECTED' || (e.type === undefined && e.code === 4001));
@@ -58,8 +59,10 @@ const gnosignin = (() => {
   }
   const signBytesOf = doc => JSON.stringify(sortedObject(doc)).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
 
-  // connect connects the wallet and answers its address.
+  // connect connects the wallet and answers its address. Adena puts window.adena on the page a moment after it loads,
+  // so a click right away waits up to two seconds for it.
   async function connect() {
+    for (let i = 0; i < 20 && !window.adena; i++) await new Promise(r => setTimeout(r, 100));
     const a = window.adena;
     if (!a) throw new Error('Adena was not found — install the Adena wallet extension (adena.app), then reload this page');
     if (!a.SignArbitrary) throw new Error('this Adena cannot sign a phrase — update it to 1.22.2 or later');
@@ -84,7 +87,7 @@ const gnosignin = (() => {
   // prove has the wallet sign the server's phrase and answers the proof to post. With a browser key (keyMake) the
   // phrase names it, and the one signature also vouches for that key.
   async function prove(addr, key) {
-    const ch = await call('GET', cfg.challenge + (key ? '?key=' + key.id : ''));
+    const ch = await call(cfg.challengeMethod, cfg.challenge + (key ? '?key=' + key.id : ''));
     const r = await wcall(window.adena.SignArbitrary({ signer: addr, data: ch.words }), HUMAN_MS);
     if (!r || r.status !== 'success' || !r.data) throw new Error(refusal(r));
     const sg = r.data.signature || {};

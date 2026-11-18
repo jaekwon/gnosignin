@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
@@ -81,6 +82,19 @@ func Bech32(hrp string, data []byte) string {
 		out = append(out, bech32Charset[(pm>>(5*(5-i)))&31])
 	}
 	return string(out)
+}
+
+// ValidAddress says whether s is a g1… address whose checksum holds: a typo in a list of admins is caught where it
+// is read, instead of quietly locking everyone out.
+func ValidAddress(s string) bool {
+	if !AddrRE.MatchString(s) {
+		return false
+	}
+	v := bech32Expand("g")
+	for _, c := range s[2:] {
+		v = append(v, strings.IndexRune(bech32Charset, c))
+	}
+	return bech32Polymod(v) == 1
 }
 
 // Address is the g1… address of a compressed secp256k1 key: RIPEMD160(SHA256(the raw 33 bytes)), bech32 under "g".

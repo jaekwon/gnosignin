@@ -1,6 +1,7 @@
 package gnosignin
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -98,6 +99,7 @@ func TestVerify(t *testing.T) {
 	other := NewSigner(t)
 	edited := strings.Replace(good, base64.StdEncoding.EncodeToString([]byte(words)), base64.StdEncoding.EncodeToString([]byte("swapped")), 1)
 	notData := strings.Replace(good, "sign/MsgSignData", "vm/m_call", 1)
+	two := strings.Replace(good, `"msgs":[`, `"msgs":[{"type":"sign/MsgSignData","value":{"data":"","signer":""}},`, 1)
 	for _, c := range []struct {
 		why                               string
 		doc, sig, pub, addr, words, chain string
@@ -111,6 +113,10 @@ func TestVerify(t *testing.T) {
 		{"not a sign/MsgSignData at all", notData, s.Sign(notData), s.Pub, s.Addr, words, chain},
 		{"a signature of the wrong length", good, base64.StdEncoding.EncodeToString([]byte("short")), s.Pub, s.Addr, words, chain},
 		{"a key of the wrong length", good, s.Sign(good), "AAAA", s.Addr, words, chain},
+		{"another wallet's signature with this key", good, other.Sign(good), s.Pub, s.Addr, words, chain},
+		{"two messages", two, s.Sign(two), s.Pub, s.Addr, words, chain},
+		{"not JSON", "words", s.Sign("words"), s.Pub, s.Addr, words, chain},
+		{"a signature out of the curve's range", good, base64.StdEncoding.EncodeToString(bytes.Repeat([]byte{0xff}, 64)), s.Pub, s.Addr, words, chain},
 	} {
 		if err := Verify(c.doc, c.sig, c.pub, c.addr, c.words, c.chain); err == nil {
 			t.Errorf("ACCEPTED %s — it must not", c.why)
